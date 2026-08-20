@@ -87,19 +87,6 @@ def cuadrada_duty( vmax=1 , dc=0 , ff=1 ,duty=50, nn=1000 , fs=1000):
 
         return tt,xx 
 
-#%%  Inicio script
 
-
-tt , xx = senoidal(vmax=2)
-
-
-#plt.plot(tt,xx)
-#plt.axhline(0, linestyle='--' , color = 'black', linewidth=1)
-
-
-tt,xx = cuadrada_duty(vmax = 2.4,duty=10,ff = 5)
-
-plt.plot(tt,xx)
-plt.axhline(0, linestyle='--' , color = 'black', linewidth=1)
 
 
