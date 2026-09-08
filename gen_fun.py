@@ -4,21 +4,29 @@ Created on Wed Aug 12 09:03:20 2026
 
     Funciones:    
         
-    senoidal( vmax=1 , dc=0 , ff=1 , ph=0 , nn=1000 , fs=1000):
+    senoidal( vmax = None, pot = None, dc=0 , ff=1 , ph=0 , nn=1000 , fs=1000,snr = None,opcion_ruido = None):
         
-    cuadrada( vmax=1 , dc=0 , ff=1 , ph=0 , nn=1000 , fs=1000):
+    cuadrada_duty( vmax = None, pot = None, dc=0 , ff=1 ,duty=50, nn=1000 , fs=1000):
         
-    cuadrada_duty( vmax=1 , dc=0 , ff=1 ,duty=50, nn=1000 , fs=1000):
+    ruido_normal(pot = 1, dc=0 , nn=1000 , fs=1000):
         
-    snr( vmax=1 , dc=0 , ff=1 , ph=0 , nn=1000 , fs=1000,snr = 10):
+    ruido_uniforme(pot = 1, dc=0 , nn=1000 , fs=1000):
+        
+    cuant(xx,n_bits,Vfs):
+        
+    triangular( vmax = None, pot = None, dc=0 , ff=1 ,duty=50, nn=1000 , fs=1000,ph = 0):
     
 @author: Fede
 """
+
+#%% ---------------------- Generador de señales
+
 import numpy as np
 import scipy.signal as sp
+import matplotlib.pyplot as plt
 
 
-#%%  Funcion generador de señales
+#%% ---------------------- Ruido normal
 
 def ruido_normal(pot = 1, dc=0 , nn=1000 , fs=1000):
     
@@ -28,6 +36,8 @@ def ruido_normal(pot = 1, dc=0 , nn=1000 , fs=1000):
     
     return tt , xx
 
+#%% ---------------------- Ruido uniforme
+
 def ruido_uniforme(pot = 1, dc=0 , nn=1000 , fs=1000):
     
     tt=np.arange(0,nn,1)
@@ -35,6 +45,8 @@ def ruido_uniforme(pot = 1, dc=0 , nn=1000 , fs=1000):
     xx = np.random.uniform(-a,a,nn)
     
     return tt , xx
+
+#%% ---------------------- Senoidal
     
 def senoidal( vmax = None, pot = None, dc=0 , ff=1 , ph=0 , nn=1000 , fs=1000,snr = None,opcion_ruido = None):
     
@@ -82,32 +94,8 @@ def senoidal( vmax = None, pot = None, dc=0 , ff=1 , ph=0 , nn=1000 , fs=1000,sn
         
     return tt , xx
 
-def cuadrada( vmax=1 , dc=0 , ff=1 , ph=0 , nn=1000 , fs=1000):
-    
-    """
-    Señal cuadrada. 
-    
-    vmax: float
-         Amplitud de la señal.
-    dc: float
-         Nivel de continua.
-    ff: float
-         Frecuencia en Hz.
-    ph: float
-         Fase en radianes.
-    nn: int
-         Cantidad de muestras.
-    fs: float
-         Frecuencia de muestreo en Hz.
-                 
-        
-    Retorna vectores tt y xx (tiempo y amplitud)
-    """
-    
-    tt=np.arange(0,nn,1)
-    xx = vmax * np.sign(np.sin(2*np.pi*ff*tt/fs + ph) )+ dc
 
-    return tt,xx 
+#%% ---------------------- cuadrada duty
     
 def cuadrada_duty( vmax = None, pot = None, dc=0 , ff=1 ,duty=50, nn=1000 , fs=1000):
         
@@ -146,6 +134,7 @@ def cuadrada_duty( vmax = None, pot = None, dc=0 , ff=1 ,duty=50, nn=1000 , fs=1
 
         return tt,xx 
     
+#%% ---------------------- Cuantizador
     
 def cuant(xx,n_bits,Vfs):
             
@@ -161,10 +150,9 @@ def cuant(xx,n_bits,Vfs):
         Retorna vector x (amplitud)
         """
         N = (2**n_bits)
-        q =2 * Vfs/(N-1)
+        q =2 * Vfs/N
         x = np.round(xx/q)*q
-        # x =  np.clip(x,((-N/2)+1),N/2)
-        return x , q
+        return x 
 
 # def cuant2(xx,n_bits,Vfs):
             
@@ -185,7 +173,7 @@ def cuant(xx,n_bits,Vfs):
 #         x = np.round(xx*(N-1))
 #         return x
 
-tt,xx = cuadrada_duty( vmax=1 , dc=0 , ff=10 ,duty=50, nn=1000 , fs=1000)
+#%% ---------------------- Triangular
 
 def triangular( vmax = None, pot = None, dc=0 , ff=1 ,duty=50, nn=1000 , fs=1000,ph = 0):
         
@@ -223,5 +211,49 @@ def triangular( vmax = None, pot = None, dc=0 , ff=1 ,duty=50, nn=1000 , fs=1000
         xx = (vmax * (sp.sawtooth((2*np.pi*ff*tt/fs+ph+np.pi/2),0.5))) + dc
 
         return tt,xx 
+
+#%% ---------------------- Grafico Espectro
+
+def espectro(t,x,N,fs,xlim_min = None , xlim_max = None):
+    
+    frec = t*(fs/N)
+    X = 1/N * np.fft.fft(x)
+    X_arg = np.angle(X)
+    X_db = 10 * (np.log10((np.abs(X)**2)*2))    # A db (escala 0db 1W)
+
+    fig, ax = plt.subplots(2, 1, figsize=(10, 6),layout="constrained")
+    
+    x_max = N//2
+    x_min = 0
+    
+    if xlim_max is not None : x_max = xlim_max
+    if xlim_min is not None : x_min = xlim_min    
+
+# --- Subplot 0: Espectro de Magnitud ---
+    ax[0].plot(frec[x_min:x_max], X_db[x_min:x_max], linewidth=1.2, color='#1f77b4')
+    ax[0].set_title("Densidad espectral de potencia", fontsize=11, fontweight='bold')
+    ax[0].set_ylabel("Amplitud [dB]", fontsize=10)
+    ax[0].grid(True, which='both', linestyle='--', alpha=0.5)
+    ax[0].minorticks_on()
+
+# --- Subplot 1: Fase ---
+    ax[1].plot(frec[x_min:x_max], X_arg[x_min:x_max], linewidth=1.2, color='#ff7f0e')
+    ax[1].set_title("Fase", fontsize=11, fontweight='bold')
+    ax[1].set_xlabel("Frecuencia [Hz]", fontsize=10)
+    ax[1].set_ylabel("Fase [rad]", fontsize=10)
+    ax[1].set_yticks([-np.pi, -np.pi / 2, 0, np.pi / 2, np.pi])
+    ax[1].set_yticklabels([r'$-\pi$', r'$-\pi/2$', r'$0$', r'$\pi/2$', r'$\pi$'])
+    ax[1].grid(True, which='both', linestyle='--', alpha=0.5)
+    ax[1].minorticks_on()
+
+    
+#%% zero padding
+    
+def zero_padding(xx, factor = 10):
+    nuevo_N = factor * len(xx)
+    pad = np.zeros(nuevo_N-len(xx), dtype=float)
+    xx = np.concatenate((xx,pad))
+    tt = np.arange(0,nuevo_N,1)
+    return(xx,tt)
 
 
