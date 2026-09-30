@@ -256,4 +256,18 @@ def zero_padding(xx, factor = 10):
     tt = np.arange(0,nuevo_N,1)
     return(xx,tt)
 
+#%% Anho de banda
 
+def bw(f,psd,pot):
+    acum = np.cumsum(psd)/np.sum(psd)
+    bw = f[np.searchsorted(acum, pot)]
+    return bw
+
+
+
+def bw_media (frec, PSD, p):
+    acum = np.cumsum(PSD)/np.sum(PSD)
+    f_baja = frec[np.searchsorted(acum, (1-p)/2)]
+    f_alta = frec[np.searchsorted(acum, 1-(1-p)/2)]
+    BW = f_alta - f_baja
+    return(f_baja, f_alta, BW)
